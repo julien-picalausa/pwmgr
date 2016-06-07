@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+	<head>
+		<title>Password manager</title>
+		<script src="scrypt.js"></script>
+		<script src="b64.js"></script>
+		<script src="pwmgr.js"></script>
+		<link rel="stylesheet" href="pwmgr.css" />
+	</head>
+	<body>
+		<div id="initial">
+			<section>
+				<h1>Password manager</h1>
+				<form id="logon_form">
+					<p><input id="username" type="text" autofocus="1" maxlength="15" placeholder="Username" /></p>
+					<p><input id="password" type="password" placeholder="Password" /></p>
+					<p><input id="TOTP" type="password"  maxlength="6" placeholder="PIN" inputmode="numeric" /></p>
+					<p><button id="logon" type="submit">Ok</button> <em id="status"></em></p>
+				</form>
+			</section>
+			<hr />
+			<section>
+				<form id="new_challenge_form">
+					<h1>New challenge value</h1>
+					<p><input id="challenge" type="text" placeholder="Challenge" /></p>
+					<p><input id="password_ch" type="password" placeholder="Password" /></p>
+					<p><button type="submit">Ok</button></p>
+				</form>
+				<p id="challenge_response"></p>
+			</section>
+		</div>
+		<div id="loaded" hidden="1">
+			<table id="password_table">
+				<thead>
+					<tr>
+						<th scope="column">Category</th>
+						<th scope="column">Location</th>
+						<th scope="column">Username</th>
+						<th scope="column">Actions</th>
+						<th scope="column">Extras</th>
+						<th scope="column">Generation Time</th>
+					</tr>
+				</thead>
+
+			</table>
+			<form id="refresh_form">
+				<p>
+					<input id="TOTP2" type="password" maxlength="6" placeholder="PIN" inputmode="numeric" />
+					<button id="refresh" type="submit">Refresh</button>
+					<em id="status2"></em>
+				</p>
+			</form>
+			<p id="copy_source"></p>
+			<template id="category">
+				<tbody>
+					<tr class="category_title"><th colspan="6"></th></tr>
+				</tbody>
+			</template>
+			<template id="entry">
+				<tr>
+					<td class="category_column"></td>
+					<td></td>
+					<td></td>
+					<td><button type="button">Username</button> <button type="button">Password</button></td>
+					<td></td>
+					<td></td>
+				</tr>
+			</template>
+		</div>
+	</body>
+</html>

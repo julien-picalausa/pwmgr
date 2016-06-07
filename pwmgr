@@ -1,0 +1,197 @@
+#!/bin/sh
+
+unset IFS
+
+pwmgr_db_path=~/.pwmgr/db.json
+
+fail () { echo "$*" >&2; exit 1;}
+
+while getopts :f: arg; do
+	case ${arg} in
+		f)
+			pwmgr_db_path=${OPTARG}
+			;;
+	esac
+done
+
+pwmgr_db_temp_path=${pwmgr_db_path}.tmp
+
+mkdir -p `dirname $pwmgr_db_path`
+
+[ -e "${pwmgr_db_path}" ] || echo "{}" > ${pwmgr_db_path}
+
+echo "[A]dd, [R]emove, Change [P]assword, [E]dit, [O]tp key, [M]aster password Validation, [Q]uit"
+read -p "Choose a command:" command
+
+case "$command" in
+	o|O)
+		read -p "Change OTP key? " confirm
+		[ "${confirm}" = "y" ] || exit 0;
+
+		otp_key=`dd bs=16 if=/dev/urandom count=1 2>&- | xxd -p` || fail "Failed to obtain key"
+
+		jq --tab ".\"otp_key\" = \"${otp_key}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+
+		echo New OTP key: ${otp_key}
+
+		exit 0
+		;;
+	m|M)
+		read -p "Change master password validation? " confirm
+		[ "${confirm}" = "y" ] || exit 0;
+		
+		challenge=`dd bs=30 if=/dev/urandom count=1 2>&- | openssl enc -base64` || fail "Failed to obtain challenge value"
+		echo New challenge value: ${challenge}
+		read -p "New response: " response
+
+		jq --tab ".\"master_key_challenge\" = \"${challenge}\" | .\"master_key_response\" = \"${response}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+
+		exit 0
+		;;
+	q|Q)
+		exit 0
+		;;
+esac
+
+read -p "Location: " location
+read -p "Username: " username
+
+key="$username|$location"
+
+case "$command" in
+	a|A)
+		jq -e ".\"$key\"" ${pwmgr_db_path} > /dev/null && fail "Entry already exists"
+		salt=`dd bs=30 if=/dev/urandom count=1 2>&- | openssl enc -base64` || fail "Failed to obtain salt"
+
+		read -p "Category: " category
+
+		read -p "Extra:" extra
+
+		read -p "Length: " length
+		unset length_string
+		if [ -n "${length}" ] && [ ${length} -gt 0 ] && [ ${length} -lt 85 ] ; then
+			length_string=", \"length\": ${length} "
+		fi
+
+		unset link
+		while [ "${link}" != "y" ] && [ "${link}" != "n" ]; do
+			read -p "Link (y or n): " link
+		done
+
+		if [ "${link}" = "y" ]; then
+			link_string=", \"link\": true"
+		else
+			link_string=", \"link\": false"
+		fi
+
+		while true; do
+			read -p "Substitution characters (2 characters or none for default): " subs
+			unset subs_string
+			if [ `echo -n ${subs} | wc -c` -eq "2" ]; then
+				subs_string=", \"subs\": \"${subs}\""
+				break
+			elif [ -z "${subs}" ]; then
+				break
+			fi
+			echo "Replacement characters was not exactly two character long"
+		done
+
+		json="{\"${key}\": {\"location\":\"${location}\", \"username\":\"${username}\", \"category\":\"${category}\", \"extra\":\"${extra}\", \"gen_time\":\"`date -u \"+%Y-%m-%d %H:%M:%S\"`\", \"salt\":\"${salt}\"${length_string}${link_string}${subs_string}}}"
+		jq --tab ".+$json" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+
+		;&
+	e|E)
+		jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
+
+		unset category_string
+		unset extra_string
+		unset length_string
+		unset link_string
+		unset subs_string
+
+		while true; do
+			echo -e "[C]ategory, [E]xtra, [L]ength, Lin[k], [S]ubstitution characters\n[W]rite, E[x]it"
+			read -p "Choose a field to edit or an action: " action
+			case "$action" in
+				c|C)
+					read -p "Category: " category
+					category_string="| .\"${key}\".\"category\" = \"${category}\""
+					;;
+				e|E)
+					read -p "Extra: " extra
+					extra_string="| .\"${key}\".\"extra\" = \"${extra}\""
+					;;
+				l|L)
+					read -p "Length: " length
+
+					if [ -n "${length}" ] && [ ${length} -gt 0 ] && [ ${length} -lt 85 ]; then
+						length_string=" | .\"${key}\".\"length\" = ${length}"
+					else
+						length_string=" | del(.\"${key}\".\"length\")"
+					fi
+					;;
+				k|K)
+					unset link
+					while [ "${link}" != "y" ] && [ "${link}" != "n" ]; do
+						read -p "Link (y or n): " link
+					done
+
+					if [ "${link}" = "y" ]; then
+						link_string=" | .\"${key}\".\"link\" = true"
+					else
+						link_string=" | .\"${key}\".\"link\" = false"
+					fi
+					;;
+				s|S)
+					while true; do
+						read -p "Substitution characters (2 characters or none for default): " subs
+						unset subs_string
+						if [ `echo -n ${subs} | wc -c` -eq "2" ]; then
+							subs_string="| .\"${key}\".\"subs\" = \"${subs}\""
+							break
+						elif [ -z "${subs}" ]; then
+							subs_string="| del(.\"${key}\".\"subs\")"
+							break
+						fi
+						echo "Replacement characters was not exactly two character long"
+					done
+					;;
+				w|W)
+					jq --tab ".${category_string}${extra_string}${length_string}${link_string}${subs_string}" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+					;&
+				x|X)
+					break
+					;;
+				*)
+					echo "Unsupported action"
+			esac
+		done
+		;;
+
+	r|R)
+		jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
+		read -p "Remove? " confirm
+		[ "${confirm}" = "y" ] || exit 0;
+
+		jq --tab "del(.\"${key}\")" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+		;;
+
+	p|P)
+		jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
+		read -p "Change password? " confirm
+		[ "${confirm}" = "y" ] || exit 0;
+
+		salt=`dd bs=30 if=/dev/urandom count=1 2>&- | openssl enc -base64` || fail "Failed to obtain salt"
+		jq --tab ".\"${key}\".\"salt\" = \"${salt}\" | .\"${key}\".\"gen_time\"=\"`date -u \"+%Y-%m-%d %H:%M:%S\"`\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+		;;
+	*)
+		fail "Unrecognized command"
+		;;
+esac
+

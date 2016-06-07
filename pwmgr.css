@@ -1,0 +1,38 @@
+#password_table {
+	border-style: solid;
+	border-collapse: collapse;
+	border-color: lightgray;
+}
+
+#password_table thead th {
+	border-style: solid;
+	border-width: thin;
+	border-color: lightgray;
+}
+
+.category_title th {
+	border-style: solid;
+	border-top-style:double;
+	border-width: thin;
+	border-top-width: medium;
+	border-color: lightgray;
+	
+	text-align: left;
+	padding-left: 1em;
+}
+
+
+#password_table td.category_column {
+	border-top-style: hidden;
+}
+
+#password_table td {
+	border-left-style: solid;
+	border-width: thin;
+	border-color: lightgray;
+	
+	padding-top: 2px;
+	padding-bottom: 2px;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
