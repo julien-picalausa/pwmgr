@@ -8,6 +8,7 @@ There is a number of widely used online password managers out there, so the
 reasons for writing one more might not seem obvious. A search for currently
 known password managers that do not use a local password database reveals that
 they usually have two issues:
+
 1. They tend to be feature-rich, which increases the risk for vulnerabilities.  
    (See
    http://people.eecs.berkeley.edu/~dawnsong/papers/sec14-paper-li-zhiwei.pdf
