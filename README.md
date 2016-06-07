@@ -9,7 +9,7 @@ reasons for writing one more might not seem obvious. A search for currently
 known password managers that do not use a local password database reveals that
 they usually have two issues:
 
-1. They tend to be feature-rich, which increases the risk for vulnerabilities.  
+1. They tend to be feature-rich, which increases the risk for vulnerabilities.
    (See
    http://people.eecs.berkeley.edu/~dawnsong/papers/sec14-paper-li-zhiwei.pdf
    for exemples.)
