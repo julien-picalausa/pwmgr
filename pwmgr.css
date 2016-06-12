@@ -36,3 +36,17 @@
 	padding-left: 0.5em;
 	padding-right: 0.5em;
 }
+
+#refresh_line {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	z-index: 999;
+	background-color: white;
+	margin: 0;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	border-top-style: ridge;
+	padding-left: 1em;
+}
