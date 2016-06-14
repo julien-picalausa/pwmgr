@@ -1,3 +1,7 @@
+body {
+	margin-bottom: 3em;
+}
+
 #password_table {
 	border-style: solid;
 	border-collapse: collapse;
