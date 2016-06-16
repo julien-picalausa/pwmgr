@@ -178,7 +178,7 @@ function ProcessData() {
 		buttons[1].onclick = function(entry) {
 			return function(){CopyPassword(entry);}
 		} (entry);
-		category_data.entries[entry.location] = entry_row;
+		category_data.entries[id] = entry_row;
 	}
 
 	var existing_bodies = password_table.querySelectorAll('tbody');
