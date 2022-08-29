@@ -28,7 +28,7 @@ case "$command" in
 		read -p "Change OTP key? " confirm
 		[ "${confirm}" = "y" ] || exit 0;
 
-		otp_key=`dd bs=16 if=/dev/urandom count=1 2>&- | xxd -p` || fail "Failed to obtain key"
+		otp_key=`dd bs=20 if=/dev/urandom count=1 2>&- | xxd -p` || fail "Failed to obtain key"
 
 		jq --tab ".\"otp_key\" = \"${otp_key}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
 		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
