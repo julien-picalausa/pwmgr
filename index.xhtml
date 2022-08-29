@@ -14,7 +14,7 @@
 				<form id="logon_form">
 					<p><input id="username" type="text" autofocus="1" maxlength="15" placeholder="Username" /></p>
 					<p><input id="password" type="password" placeholder="Password" /></p>
-					<p><input id="TOTP" type="password"  maxlength="6" placeholder="PIN" inputmode="numeric" /></p>
+					<p><input id="TOTP" type="text"  maxlength="6" placeholder="PIN" inputmode="numeric" /></p>
 					<p><button id="logon" type="submit">Ok</button> <em id="status"></em></p>
 				</form>
 			</section>
@@ -45,7 +45,7 @@
 			</table>
 			<form id="refresh_form">
 				<p id="refresh_line">
-					<input id="TOTP2" type="password" maxlength="6" placeholder="PIN" inputmode="numeric" />
+					<input id="TOTP2" type="text" maxlength="6" placeholder="PIN" inputmode="numeric" />
 					<button id="refresh" type="submit">Refresh</button>
 					<em id="status2"></em>
 				</p>
