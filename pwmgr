@@ -20,8 +20,8 @@ mkdir -p `dirname $pwmgr_db_path`
 
 [ -e "${pwmgr_db_path}" ] || echo "{}" > ${pwmgr_db_path}
 
-echo "[A]dd, [R]emove, Change [P]assword, [E]dit, [O]tp key, [M]aster password Validation, [Q]uit"
-read -p "Choose a command:" command
+echo "[A]dd, [R]emove, [E]dit, [O]tp key, [M]aster password Validation, E[x]it"
+read -p "Choose a command: " command
 
 case "$command" in
 	o|O)
@@ -50,8 +50,17 @@ case "$command" in
 
 		exit 0
 		;;
-	q|Q)
+	x|X)
 		exit 0
+		;;
+	a|A)
+		;;
+	e|E)
+		;;
+	r|R)
+		;;
+	*)
+		fail "Unrecognized command"
 		;;
 esac
 
@@ -87,7 +96,7 @@ case "$command" in
 		fi
 
 		while true; do
-			read -p "Substitution characters (2 characters or none for default): " subs
+			read -p "Substitution characters for '+' and '/' (2 characters or none for default): " subs
 			unset subs_string
 			if [ `echo -n ${subs} | wc -c` -eq "2" ]; then
 				subs_string=", \"subs\": \"${subs}\""
@@ -95,7 +104,7 @@ case "$command" in
 			elif [ -z "${subs}" ]; then
 				break
 			fi
-			echo "Replacement characters was not exactly two character long"
+			echo "Substitution characters was not exactly two character long"
 		done
 
 		json="{\"${key}\": {\"location\":\"${location}\", \"username\":\"${username}\", \"category\":\"${category}\", \"extra\":\"${extra}\", \"gen_time\":\"`date -u \"+%Y-%m-%d %H:%M:%S\"`\", \"salt\":\"${salt}\"${length_string}${link_string}${subs_string}}}"
@@ -104,34 +113,32 @@ case "$command" in
 
 		;&
 	e|E)
-		jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
-
-		unset category_string
-		unset extra_string
-		unset length_string
-		unset link_string
-		unset subs_string
-
 		while true; do
-			echo -e "[C]ategory, [E]xtra, [L]ength, Lin[k], [S]ubstitution characters\n[W]rite, E[x]it"
+			echo
+			jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
+			echo -e "[C]ategory, [E]xtra, [L]ength, Lin[k], [S]ubstitution characters,\nChange [P]assword, E[x]it"
 			read -p "Choose a field to edit or an action: " action
 			case "$action" in
 				c|C)
 					read -p "Category: " category
-					category_string="| .\"${key}\".\"category\" = \"${category}\""
+					jq --tab ".\"${key}\".\"category\" = \"${category}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
 					;;
 				e|E)
 					read -p "Extra: " extra
-					extra_string="| .\"${key}\".\"extra\" = \"${extra}\""
+					jq --tab ".\"${key}\".\"extra\" = \"${extra}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
 					;;
 				l|L)
 					read -p "Length: " length
 
 					if [ -n "${length}" ] && [ ${length} -gt 0 ] && [ ${length} -lt 85 ]; then
-						length_string=" | .\"${key}\".\"length\" = ${length}"
+						length_string=".\"${key}\".\"length\" = ${length}"
 					else
-						length_string=" | del(.\"${key}\".\"length\")"
+						length_string="del(.\"${key}\".\"length\")"
 					fi
+					jq --tab "${length_string}" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
 					;;
 				k|K)
 					unset link
@@ -140,34 +147,92 @@ case "$command" in
 					done
 
 					if [ "${link}" = "y" ]; then
-						link_string=" | .\"${key}\".\"link\" = true"
+						link_string=".\"${key}\".\"link\" = true"
 					else
-						link_string=" | .\"${key}\".\"link\" = false"
+						link_string=".\"${key}\".\"link\" = false"
 					fi
+					jq --tab "${link_string}" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
 					;;
 				s|S)
 					while true; do
-						read -p "Substitution characters (2 characters or none for default): " subs
-						unset subs_string
+						read -p "Substitution characters for '+' and '/' (2 characters or none for default): " subs
 						if [ `echo -n ${subs} | wc -c` -eq "2" ]; then
-							subs_string="| .\"${key}\".\"subs\" = \"${subs}\""
+							subs_string=".\"${key}\".\"subs\" = \"${subs}\""
 							break
 						elif [ -z "${subs}" ]; then
-							subs_string="| del(.\"${key}\".\"subs\")"
+							subs_string="del(.\"${key}\".\"subs\")"
 							break
 						fi
-						echo "Replacement characters was not exactly two character long"
+						echo "Substitution characters was not exactly two character long"
+					done
+					jq --tab "${subs_string}" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+					while true; do
+						echo "extra substitutions:"
+						jq -e ".\"$key\".extra_subs" ${pwmgr_db_path} || echo "none"
+						echo "[A]dd, [R]emove, [B]ack"
+						read -p "Choose an action: " action
+						case "$action" in
+							a|A)
+								while true; do
+									read -p "Choose character to substitute (empty to cancel): " char
+									if [ -z "${char}" ]; then
+										break
+									fi
+									if echo ${char} | grep -q '^[[:alnum:]]$'; then
+										break
+									fi
+									echo "Please enter a signle alphanumeric character".
+								done
+
+								if [ -n "${char}" ]; then
+									read -p "Choose the character to use as replacement: " repl
+									if [ -n "${repl}" ]; then
+										jq --tab ".\"${key}\".\"extra_subs\".\"${char}\" = \"${repl}\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+										mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+									fi
+								fi
+								;;
+							r|R)
+								while true; do
+									read -p "Choose character to stop substituting (empty to cancel): " char
+									if [ -z "${char}" ]; then
+										break
+									fi
+									if echo ${char} | grep -q '^[[:alnum:]]$'; then
+										break
+									fi
+									echo "Please enter a signle alphanumeric character".
+								done
+								if [ -n "${char}" ]; then
+									jq --tab "del(.\"${key}\".\"extra_subs\".\"${char}\")" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+									mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
+								fi
+								;;
+							b|B)
+								break
+								;;
+							*)
+								echo "Unrecognized action"
+
+						esac
+
 					done
 					;;
-				w|W)
-					jq --tab ".${category_string}${extra_string}${length_string}${link_string}${subs_string}" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
+				p|P)
+					read -p "Change password? " confirm
+					[ "${confirm}" = "y" ] || exit 0;
+
+					salt=`dd bs=30 if=/dev/urandom count=1 2>&- | openssl enc -base64` || fail "Failed to obtain salt"
+					jq --tab ".\"${key}\".\"salt\" = \"${salt}\" | .\"${key}\".\"gen_time\"=\"`date -u \"+%Y-%m-%d %H:%M:%S\"`\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
 					mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
-					;&
+					;;
 				x|X)
 					break
 					;;
 				*)
-					echo "Unsupported action"
+					echo "Unrecognized action"
 			esac
 		done
 		;;
@@ -181,15 +246,6 @@ case "$command" in
 		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
 		;;
 
-	p|P)
-		jq -e ".\"$key\"" ${pwmgr_db_path} || fail "Entry does not exist"
-		read -p "Change password? " confirm
-		[ "${confirm}" = "y" ] || exit 0;
-
-		salt=`dd bs=30 if=/dev/urandom count=1 2>&- | openssl enc -base64` || fail "Failed to obtain salt"
-		jq --tab ".\"${key}\".\"salt\" = \"${salt}\" | .\"${key}\".\"gen_time\"=\"`date -u \"+%Y-%m-%d %H:%M:%S\"`\"" ${pwmgr_db_path} > ${pwmgr_db_temp_path} || fail "jq failed"
-		mv -f ${pwmgr_db_temp_path} ${pwmgr_db_path} || fail "Failed moving resulting file"
-		;;
 	*)
 		fail "Unrecognized command"
 		;;

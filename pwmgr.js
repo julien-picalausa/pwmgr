@@ -52,7 +52,14 @@ function CopyPassword(entry) {
 		replacement1 = entry.subs[0];
 		replacement2 = entry.subs[1];
 	}
-	password = password.replace(/\+/g, replacement1).replace(/\//g, replacement2);
+	password = password.replaceAll("+", replacement1).replaceAll("/", replacement2);
+
+	if (entry.extra_subs) {
+		for (const [character, replacement] of Object.entries(entry.extra_subs)) {
+			password = password.replaceAll(character, replacement);
+		}
+	}
+
 	if (entry.length != undefined)
 		password = password.substr(-entry.length);
 	CopyText(password);
